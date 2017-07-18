@@ -60,6 +60,9 @@ type CreateClusterOptions struct {
 	MasterSize           string
 	MasterCount          int32
 	NodeCount            int32
+	NodeMaxCount         int32
+	NodeMinCount		 int32
+	MaxPrice 			 string
 	MasterVolumeSize     int32
 	NodeVolumeSize       int32
 	EncryptEtcdStorage   bool
@@ -242,6 +245,12 @@ func NewCmdCreateCluster(f *util.Factory, out io.Writer) *cobra.Command {
 
 	cmd.Flags().Int32Var(&options.MasterCount, "master-count", options.MasterCount, "Set the number of masters.  Defaults to one master per master-zone")
 	cmd.Flags().Int32Var(&options.NodeCount, "node-count", options.NodeCount, "Set the number of nodes")
+	cmd.Flags().Int32Var(&options.NodeMinCount, "node-min-count", options.NodeMinCount, "Set the minimum number of nodes")
+	cmd.Flags().Int32Var(&options.NodeMaxCount, "node-max-count", options.NodeMaxCount, "Set the maximum number of nodes")
+
+	//spot instance bid price
+	cmd.Flags().StringVar(&options.MaxPrice, "node-price", options.MaxPrice, "Set spot instance max bid price for nodes")
+
 	cmd.Flags().BoolVar(&options.EncryptEtcdStorage, "encrypt-etcd-storage", options.EncryptEtcdStorage, "Generate key in aws kms and use it for encrypt etcd volumes")
 
 	cmd.Flags().StringVar(&options.Image, "image", options.Image, "Image to use for all instances.")
@@ -553,6 +562,22 @@ func RunCreateCluster(f *util.Factory, out io.Writer, c *CreateClusterOptions) e
 		for _, group := range nodes {
 			group.Spec.MinSize = fi.Int32(c.NodeCount)
 			group.Spec.MaxSize = fi.Int32(c.NodeCount)
+		}
+	} else if c.NodeMinCount == 0 || c.NodeMaxCount == 0 || c.NodeMinCount > c.NodeMaxCount {
+		  return fmt.Errorf("Min and max count should be set and/or min count is lower than max count in case node count is not specified")
+	} else {
+		  for _, group := range nodes {
+			  group.Spec.MinSize = fi.Int32(c.NodeMinCount)
+			  group.Spec.MaxSize = fi.Int32(c.NodeMaxCount)
+		}
+	}
+
+	if cluster.Spec.CloudProvider == "aws" {
+		// AWS support for spot price
+		if c.MaxPrice != "" {
+			for _, group := range nodes {
+				group.Spec.MaxPrice = &c.MaxPrice
+			}
 		}
 	}
 
