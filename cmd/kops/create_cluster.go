@@ -61,8 +61,8 @@ type CreateClusterOptions struct {
 	MasterCount          int32
 	NodeCount            int32
 	NodeMaxCount         int32
-	NodeMinCount		 int32
-	MaxPrice 			 string
+	NodeMinCount         int32
+	MaxPrice 	     string
 	MasterVolumeSize     int32
 	NodeVolumeSize       int32
 	EncryptEtcdStorage   bool
